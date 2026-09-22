@@ -5,11 +5,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://app.sparkco.space https://*.sparkco.space https://*.vercel.app"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "ALLOWALL"
+          "value": "frame-ancestors *"
         },
         {
           "key": "Cross-Origin-Resource-Policy",
@@ -22,11 +18,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://app.sparkco.space https://*.sparkco.space https://*.vercel.app"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "ALLOWALL"
+          "value": "frame-ancestors *"
         },
         {
           "key": "Cross-Origin-Resource-Policy",
