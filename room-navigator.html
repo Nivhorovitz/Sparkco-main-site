@@ -67,36 +67,48 @@
   <main class="shell"><nav class="navigator" id="navigator" aria-label="ניווט בין חדרי TheZone"></nav></main>
   <script src="https://orbitrage.vercel.app/lib/sparkco-bridge.js"></script>
   <script>
-    const PLUGIN_BUILD_VERSION="2026.09.22.2";
+    const PLUGIN_BUILD_VERSION="2026.09.22.3";
     const bridge=window.SparkcoBridge||null;
     let bridgeInitialized=false;
     let bridgeInit=null;
+    const debugMode=new URLSearchParams(location.search).get("debug")==="1";
+    function setDebug(text,ok=false){
+      if(!debugMode)return;
+      let el=document.getElementById("bridge-debug");
+      if(!el){el=document.createElement("div");el.id="bridge-debug";el.style.cssText="position:fixed;inset:6px auto auto 6px;z-index:99;padding:4px 7px;border-radius:999px;background:rgba(7,10,18,.86);border:1px solid rgba(255,255,255,.18);color:#fff;font:600 11px/1.2 system-ui;direction:ltr";document.body.appendChild(el)}
+      el.textContent="TheZone nav · "+text; el.style.borderColor=ok?"rgba(90,235,205,.5)":"rgba(255,190,90,.45)";
+    }
 
     const THEZONE_ROOMS=[
-      {name:"שער הכניסה",url:"https://localhost:9090/s/sparco_new?room=EGIHYGBmIcH14o5q0djV"},
-      {name:"מוזיקה וסאונד",url:"https://localhost:9090/s/sparco_new?room=twroJJybec65EcOfNalj"},
-      {name:"Stage",url:"https://localhost:9090/s/sparco_new?room=9rA78JkKi021aD1ym5jK"},
-      {name:"אנשים וחברה",url:"https://localhost:9090/s/sparco_new?room=f27J8wTgALi4wsQUYgpT"},
-      {name:"מסעות ומקומות",url:"https://localhost:9090/s/sparco_new?room=oeSbeQbg1TxBJ244eyIN"},
-      {name:"יצירה ועיצוב",url:"https://localhost:9090/s/sparco_new?room=QsT90mBq4TsjO8mSFiY3"},
-      {name:"טבע וכדור הארץ",url:"https://localhost:9090/s/sparco_new?room=JjdNLb8omo14GakqfsUf"},
-      {name:"גילוי ופליאה",url:"https://localhost:9090/s/sparco_new?room=4TyerVGt2zF9HxbbIJnX"},
-      {name:"סיפורים ומסך",url:"https://localhost:9090/s/sparco_new?room=yiAE4H6nplhaEpffp1p5"},
-      {name:"תנועה וספורט",url:"https://localhost:9090/s/sparco_new?room=hTD0SrwKR9WEnUCuMtIN"},
-      {name:"טכנולוגיה והעתיד",url:"https://localhost:9090/s/sparco_new?room=Ufz19MjwTUYxr6uHpFyz"}
+      {name:"שער הכניסה",roomId:"EGIHYGBmIcH14o5q0djV"},
+      {name:"מוזיקה וסאונד",roomId:"twroJJybec65EcOfNalj"},
+      {name:"Stage",roomId:"9rA78JkKi021aD1ym5jK"},
+      {name:"אנשים וחברה",roomId:"f27J8wTgALi4wsQUYgpT"},
+      {name:"מסעות ומקומות",roomId:"oeSbeQbg1TxBJ244eyIN"},
+      {name:"יצירה ועיצוב",roomId:"QsT90mBq4TsjO8mSFiY3"},
+      {name:"טבע וכדור הארץ",roomId:"JjdNLb8omo14GakqfsUf"},
+      {name:"גילוי ופליאה",roomId:"4TyerVGt2zF9HxbbIJnX"},
+      {name:"סיפורים ומסך",roomId:"yiAE4H6nplhaEpffp1p5"},
+      {name:"תנועה וספורט",roomId:"hTD0SrwKR9WEnUCuMtIN"},
+      {name:"טכנולוגיה והעתיד",roomId:"Ufz19MjwTUYxr6uHpFyz"}
     ];
     const ACCENTS=[[98,232,255,128,125,255],[255,98,208,137,103,255],[177,121,255,92,220,255],[255,124,147,255,182,105],[83,231,203,91,177,255],[255,154,99,255,94,183],[149,244,114,75,229,181],[255,221,91,255,146,91],[102,167,255,132,116,255],[255,118,87,255,205,92],[82,195,255,87,109,255]];
     const qs=new URLSearchParams(location.search);
     const bool=(value,fallback=false)=>{if(value==null||value===""||value.includes("@@"))return fallback;return["1","true","yes","on"].includes(String(value).toLowerCase())};
     function decodeBase64Unicode(value){let raw=value.trim().replace(/-/g,"+").replace(/_/g,"/");while(raw.length%4)raw+="=";const binary=atob(raw);const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes)}
-    function normalizeRooms(input){if(!Array.isArray(input))return[];return input.map((item,index)=>{if(Array.isArray(item))return{name:String(item[0]??""),url:String(item[1]??""),index};if(item&&typeof item==="object")return{name:String(item.name??item.label??""),url:String(item.url??item.href??""),index,accent:item.accent};return null}).filter(r=>r&&r.name&&r.url)}
+    function normalizeRooms(input){
+      if(!Array.isArray(input))return[];
+      return input.map((item,index)=>{
+        let name="", roomId="", accent;
+        if(Array.isArray(item)){name=String(item[0]??""); const raw=String(item[1]??""); try{roomId=new URL(raw,location.href).searchParams.get("room")||raw}catch(_e){roomId=raw}}
+        else if(item&&typeof item==="object"){name=String(item.name??item.label??""); roomId=String(item.roomId??item.room_id??""); accent=item.accent; if(!roomId){const raw=String(item.url??item.href??""); try{roomId=new URL(raw,location.href).searchParams.get("room")||""}catch(_e){roomId=""}}}
+        return name&&roomId?{name,roomId,index,accent}:null;
+      }).filter(Boolean)
+    }
     function loadRooms(){const roomParam=qs.get("rooms");if(!roomParam||roomParam.includes("@@"))return THEZONE_ROOMS;try{const decoded=roomParam.trim().startsWith("[")?roomParam:decodeBase64Unicode(roomParam);const parsed=typeof decoded==="string"?JSON.parse(decoded):decoded;const rooms=normalizeRooms(parsed);return rooms.length?rooms:THEZONE_ROOMS}catch(error){console.warn("Room Navigator: failed to parse rooms parameter",error);return THEZONE_ROOMS}}
     const dedupe=rooms=>{const map=new Map();for(const room of rooms)map.set(room.name.trim(),room);return[...map.values()]};
     function applyConfig(){const root=document.documentElement;const nav=document.getElementById("navigator");const transparent=bool(qs.get("transparent"),bool(qs.get("spk_transparent"),true));const layout=["flow","stack","grid"].includes(qs.get("layout"))?qs.get("layout"):"flow";const theme=["zone","minimal","neon"].includes(qs.get("theme"))?qs.get("theme"):"zone";const maxSign=Number(qs.get("max_width"));const fontSize=Number(qs.get("font_size"));const radius=Number(qs.get("radius"));const gap=Number(qs.get("gap"));document.body.classList.toggle("has-backdrop",!transparent);nav.dataset.layout=layout;nav.dataset.theme=theme;if(Number.isFinite(maxSign)&&maxSign>=150&&maxSign<=360)root.style.setProperty("--max-sign",`${maxSign}px`);if(Number.isFinite(fontSize)&&fontSize>=13&&fontSize<=28)root.style.setProperty("--font-size",`${fontSize}px`);if(Number.isFinite(radius)&&radius>=8&&radius<=40)root.style.setProperty("--radius",`${radius}px`);if(Number.isFinite(gap)&&gap>=4&&gap<=30)root.style.setProperty("--gap",`${gap}px`);return{theme,layout}}
-    function roomIdFrom(room){
-      if(room.roomId)return String(room.roomId);
-      try{return new URL(room.url,location.href).searchParams.get("room")||""}catch(_e){return""}
-    }
+    function roomIdFrom(room){return String(room&&room.roomId||"")}
     function showStatus(message,isError=true){
       let el=document.getElementById("nav-status");
       if(!el){el=document.createElement("div");el.id="nav-status";el.style.cssText="position:fixed;inset:auto 12px 12px 12px;z-index:50;padding:10px 12px;border-radius:12px;background:rgba(8,11,20,.92);border:1px solid rgba(255,255,255,.18);color:#fff;font:600 13px/1.35 system-ui;text-align:center;box-shadow:0 12px 28px rgba(0,0,0,.3);direction:rtl";document.body.appendChild(el)}
@@ -113,11 +125,12 @@
     }
     function render(){const nav=document.getElementById("navigator");const{theme}=applyConfig();const rooms=dedupe(loadRooms());if(!rooms.length){nav.innerHTML='<div class="empty">לא נמצאו חדרים להצגה.</div>';return}nav.innerHTML="";rooms.forEach((room,index)=>{const accent=ACCENTS[index%ACCENTS.length];const a=Array.isArray(room.accent)&&room.accent.length>=6?room.accent:accent;const link=document.createElement("button");link.type="button";link.className="room-sign";link.dataset.theme=theme;link.style.setProperty("--accent",`${a[0]}, ${a[1]}, ${a[2]}`);link.style.setProperty("--accent2",`${a[3]}, ${a[4]}, ${a[5]}`);link.setAttribute("aria-label",`מעבר לחדר ${room.name}`);link.innerHTML='<span class="signal" aria-hidden="true"></span><span class="label"></span><svg class="arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M9 7h8v8"></path></svg>';link.querySelector(".label").textContent=room.name;link.addEventListener("click",()=>navigateRoom(room));nav.appendChild(link)})}
     function wireBridge(){
-      if(!bridge||!bridge.isAvailable()){console.log("[THEZONE-ROOMS] DECISION bridge unavailable");return}
-      bridge.onInit(function(init){bridgeInitialized=true;bridgeInit=init||null;console.log("[THEZONE-ROOMS] RESULT bridge init",Boolean(init));});
+      if(!bridge||!bridge.isAvailable()){console.log("[THEZONE-ROOMS] DECISION bridge unavailable");setDebug("bridge unavailable",false);return}
+      bridge.onInit(function(init){bridgeInitialized=true;bridgeInit=init||null;setDebug("bridge ready",true);console.log("[THEZONE-ROOMS] RESULT bridge init",Boolean(init));});
       bridge.onSnapshot(function(){});
       bridge.onEvent(function(){});
       const announced=bridge.ready(PLUGIN_BUILD_VERSION);
+      setDebug(announced?"waiting for init":"ready() refused",false);
       console.log("[THEZONE-ROOMS] RESULT ready",announced);
     }
     render();
