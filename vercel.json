@@ -1,0 +1,38 @@
+{
+  "headers": [
+    {
+      "source": "/room-navigator.html",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://app.sparkco.space https://*.sparkco.space https://*.vercel.app"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "ALLOWALL"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/room-navigator/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://app.sparkco.space https://*.sparkco.space https://*.vercel.app"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "ALLOWALL"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "cross-origin"
+        }
+      ]
+    }
+  ]
+}
