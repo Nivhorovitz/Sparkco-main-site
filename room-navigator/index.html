@@ -65,8 +65,7 @@
 </head>
 <body>
   <main class="shell"><nav class="navigator" id="navigator" aria-label="ניווט בין חדרי TheZone"></nav></main>
-  <script>
-    const THEZONE_ROOMS=[
+  <script src="https://orbitrage.vercel.app/lib/sparkco-bridge.js"></script>\n  <script>\n    const PLUGIN_BUILD_VERSION="2026.09.22.2";\n    const bridge=window.SparkcoBridge||null;\n    let bridgeInitialized=false;\n    let bridgeInit=null;\n\n    const THEZONE_ROOMS=[
       {name:"שער הכניסה",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=EGIHYGBmIcH14o5q0djV"},
       {name:"מוזיקה וסאונד",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=twroJJybec65EcOfNalj"},
       {name:"Stage",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=9rA78JkKi021aD1ym5jK"},
@@ -87,8 +86,35 @@
     function loadRooms(){const roomParam=qs.get("rooms");if(!roomParam||roomParam.includes("@@"))return THEZONE_ROOMS;try{const decoded=roomParam.trim().startsWith("[")?roomParam:decodeBase64Unicode(roomParam);const parsed=typeof decoded==="string"?JSON.parse(decoded):decoded;const rooms=normalizeRooms(parsed);return rooms.length?rooms:THEZONE_ROOMS}catch(error){console.warn("Room Navigator: failed to parse rooms parameter",error);return THEZONE_ROOMS}}
     const dedupe=rooms=>{const map=new Map();for(const room of rooms)map.set(room.name.trim(),room);return[...map.values()]};
     function applyConfig(){const root=document.documentElement;const nav=document.getElementById("navigator");const transparent=bool(qs.get("transparent"),bool(qs.get("spk_transparent"),true));const layout=["flow","stack","grid"].includes(qs.get("layout"))?qs.get("layout"):"flow";const theme=["zone","minimal","neon"].includes(qs.get("theme"))?qs.get("theme"):"zone";const maxSign=Number(qs.get("max_width"));const fontSize=Number(qs.get("font_size"));const radius=Number(qs.get("radius"));const gap=Number(qs.get("gap"));document.body.classList.toggle("has-backdrop",!transparent);nav.dataset.layout=layout;nav.dataset.theme=theme;if(Number.isFinite(maxSign)&&maxSign>=150&&maxSign<=360)root.style.setProperty("--max-sign",`${maxSign}px`);if(Number.isFinite(fontSize)&&fontSize>=13&&fontSize<=28)root.style.setProperty("--font-size",`${fontSize}px`);if(Number.isFinite(radius)&&radius>=8&&radius<=40)root.style.setProperty("--radius",`${radius}px`);if(Number.isFinite(gap)&&gap>=4&&gap<=30)root.style.setProperty("--gap",`${gap}px`);return{theme,layout}}
-    function render(){const nav=document.getElementById("navigator");const{theme}=applyConfig();const rooms=dedupe(loadRooms());if(!rooms.length){nav.innerHTML='<div class="empty">לא נמצאו חדרים להצגה.</div>';return}nav.innerHTML="";rooms.forEach((room,index)=>{const accent=ACCENTS[index%ACCENTS.length];const a=Array.isArray(room.accent)&&room.accent.length>=6?room.accent:accent;const link=document.createElement("a");link.className="room-sign";link.href=room.url;link.target=qs.get("target")||"_top";link.rel="noopener";link.dataset.theme=theme;link.style.setProperty("--accent",`${a[0]}, ${a[1]}, ${a[2]}`);link.style.setProperty("--accent2",`${a[3]}, ${a[4]}, ${a[5]}`);link.setAttribute("aria-label",`מעבר לחדר ${room.name}`);link.innerHTML='<span class="signal" aria-hidden="true"></span><span class="label"></span><svg class="arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M9 7h8v8"></path></svg>';link.querySelector(".label").textContent=room.name;nav.appendChild(link)})}
+    function roomIdFrom(room){
+      if(room.roomId)return String(room.roomId);
+      try{return new URL(room.url,location.href).searchParams.get("room")||""}catch(_e){return""}
+    }
+    function showStatus(message,isError=true){
+      let el=document.getElementById("nav-status");
+      if(!el){el=document.createElement("div");el.id="nav-status";el.style.cssText="position:fixed;inset:auto 12px 12px 12px;z-index:50;padding:10px 12px;border-radius:12px;background:rgba(8,11,20,.92);border:1px solid rgba(255,255,255,.18);color:#fff;font:600 13px/1.35 system-ui;text-align:center;box-shadow:0 12px 28px rgba(0,0,0,.3);direction:rtl";document.body.appendChild(el)}
+      el.textContent=message;el.style.borderColor=isError?"rgba(255,110,130,.45)":"rgba(90,235,205,.42)";el.hidden=false;
+      clearTimeout(showStatus._t);showStatus._t=setTimeout(()=>{el.hidden=true},4200);
+    }
+    function navigateRoom(room){
+      const roomId=roomIdFrom(room);
+      if(!roomId){showStatus("לא נמצא מזהה לחדר הזה.");return}
+      if(!bridge||!bridge.isAvailable()){showStatus("החיבור ל-Sparkco לא זמין באלמנט הזה. ודא שה-Security preset הוא Standard או Full Control.");return}
+      if(!bridgeInitialized){showStatus("הניווט עדיין מתחבר ל-Sparkco. נסה שוב בעוד רגע.");return}
+      const ok=bridge.navigate(roomId);
+      if(!ok){showStatus('Sparkco חסם את הניווט. הפעל באלמנט: "Navigate the Sparkco page on user click".');return}
+    }
+    function render(){const nav=document.getElementById("navigator");const{theme}=applyConfig();const rooms=dedupe(loadRooms());if(!rooms.length){nav.innerHTML='<div class="empty">לא נמצאו חדרים להצגה.</div>';return}nav.innerHTML="";rooms.forEach((room,index)=>{const accent=ACCENTS[index%ACCENTS.length];const a=Array.isArray(room.accent)&&room.accent.length>=6?room.accent:accent;const link=document.createElement("button");link.type="button";link.className="room-sign";link.dataset.theme=theme;link.style.setProperty("--accent",`${a[0]}, ${a[1]}, ${a[2]}`);link.style.setProperty("--accent2",`${a[3]}, ${a[4]}, ${a[5]}`);link.setAttribute("aria-label",`מעבר לחדר ${room.name}`);link.innerHTML='<span class="signal" aria-hidden="true"></span><span class="label"></span><svg class="arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M9 7h8v8"></path></svg>';link.querySelector(".label").textContent=room.name;link.addEventListener("click",()=>navigateRoom(room));nav.appendChild(link)})}
+    function wireBridge(){
+      if(!bridge||!bridge.isAvailable()){console.log("[THEZONE-ROOMS] DECISION bridge unavailable");return}
+      bridge.onInit(function(init){bridgeInitialized=true;bridgeInit=init||null;console.log("[THEZONE-ROOMS] RESULT bridge init",Boolean(init));});
+      bridge.onSnapshot(function(){});
+      bridge.onEvent(function(){});
+      const announced=bridge.ready(PLUGIN_BUILD_VERSION);
+      console.log("[THEZONE-ROOMS] RESULT ready",announced);
+    }
     render();
+    wireBridge();
   </script>
 </body>
 </html>
