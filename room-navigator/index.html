@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>TheZone Room Navigator</title>
+  <style>
+    :root {
+      --ink: #f8fbff;
+      --muted: rgba(240,246,255,.64);
+      --panel: rgba(13, 17, 31, .52);
+      --panel-strong: rgba(13, 17, 31, .72);
+      --line: rgba(255,255,255,.18);
+      --shadow: 0 18px 42px rgba(0,0,0,.26);
+      --radius: 20px;
+      --gap: 12px;
+      --font-size: 18px;
+      --max-sign: 218px;
+      --min-sign: 112px;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-rounded, "SF Pro Rounded", "Arial Hebrew", "Noto Sans Hebrew", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink); background: transparent; overflow-x: hidden;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    }
+    body.has-backdrop {
+      background: radial-gradient(circle at 18% 12%, rgba(96,103,255,.14), transparent 29%), radial-gradient(circle at 83% 76%, rgba(0,229,255,.10), transparent 30%), linear-gradient(180deg, rgba(5,8,18,.88), rgba(5,8,18,.74));
+    }
+    .shell { width:100%; min-height:100vh; display:grid; place-items:center; padding:14px; }
+    .navigator { width:min(100%,880px); display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:var(--gap); direction:rtl; }
+    .navigator[data-layout="stack"] { max-width:330px; flex-direction:column; align-items:stretch; }
+    .navigator[data-layout="stack"] .room-sign { width:100%; max-width:none; }
+    .navigator[data-layout="grid"] { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:stretch; }
+    .navigator[data-layout="grid"] .room-sign { width:100%; max-width:none; }
+    .room-sign {
+      --accent:135,237,255; --accent2:161,119,255; position:relative; isolation:isolate; display:inline-flex; align-items:center; justify-content:center; gap:10px;
+      min-inline-size:var(--min-sign); max-inline-size:var(--max-sign); min-height:58px; padding:11px 16px 12px;
+      border:1px solid rgba(var(--accent),.32); border-radius:var(--radius);
+      background:linear-gradient(135deg, rgba(var(--accent),.11), rgba(var(--accent2),.07) 42%, rgba(14,18,30,.48) 75%), rgba(12,16,28,.42);
+      box-shadow:0 12px 28px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.13), 0 0 0 1px rgba(255,255,255,.02);
+      color:var(--ink); text-decoration:none; backdrop-filter:blur(14px) saturate(135%); -webkit-backdrop-filter:blur(14px) saturate(135%);
+      transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease; outline:none; overflow:hidden; cursor:pointer; -webkit-tap-highlight-color:transparent;
+    }
+    .room-sign::before { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(110deg,transparent 18%,rgba(255,255,255,.10) 45%,transparent 68%); transform:translateX(115%); transition:transform .55s cubic-bezier(.2,.7,.2,1); }
+    .room-sign::after { content:""; position:absolute; inset:auto 16px 7px 16px; height:1px; pointer-events:none; background:linear-gradient(90deg,transparent,rgba(var(--accent),.62),transparent); opacity:.48; }
+    .room-sign:hover,.room-sign:focus-visible { transform:translateY(-2px) scale(1.018); border-color:rgba(var(--accent),.58); box-shadow:0 17px 34px rgba(0,0,0,.24),0 0 28px rgba(var(--accent),.12),inset 0 1px 0 rgba(255,255,255,.16); }
+    .room-sign:hover::before,.room-sign:focus-visible::before { transform:translateX(-115%); }
+    .room-sign:active { transform:translateY(0) scale(.985); }
+    .signal { width:8px; height:8px; flex:0 0 auto; border-radius:999px; background:rgb(var(--accent)); box-shadow:0 0 13px rgba(var(--accent),.76); opacity:.92; }
+    .label { min-width:0; max-width:172px; font-size:var(--font-size); font-weight:760; letter-spacing:-.02em; line-height:1.08; text-align:center; text-wrap:balance; overflow-wrap:normal; word-break:keep-all; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .arrow { width:16px; height:16px; flex:0 0 auto; opacity:.46; transform:translateX(2px); transition:transform .18s ease,opacity .18s ease; }
+    .room-sign:hover .arrow,.room-sign:focus-visible .arrow { opacity:.92; transform:translateX(-1px); }
+    .room-sign[data-theme="minimal"] { border-color:rgba(255,255,255,.20); background:rgba(10,14,24,.54); box-shadow:0 12px 26px rgba(0,0,0,.17),inset 0 1px 0 rgba(255,255,255,.10); }
+    .room-sign[data-theme="neon"] { background:rgba(7,10,18,.64); border-color:rgba(var(--accent),.56); box-shadow:0 0 20px rgba(var(--accent),.13),inset 0 0 17px rgba(var(--accent),.05); }
+    .empty,.error { width:min(100%,620px); padding:18px 20px; border:1px solid rgba(255,255,255,.14); border-radius:18px; background:rgba(10,14,24,.58); color:var(--muted); text-align:center; font-size:14px; backdrop-filter:blur(12px); }
+    .error { color:rgba(255,220,220,.88); border-color:rgba(255,100,120,.22); }
+    @media(max-width:680px){ :root{--gap:9px;--font-size:16px;--max-sign:190px;--min-sign:104px}.shell{padding:10px}.room-sign{min-height:52px;padding:9px 13px 10px}.label{max-width:147px}.navigator[data-layout="grid"]{grid-template-columns:repeat(2,minmax(0,1fr))} }
+    @media(max-width:390px){ .navigator{gap:8px}.room-sign{max-inline-size:calc(50vw - 16px);min-inline-size:0}.label{max-width:120px;font-size:15px}.signal{width:7px;height:7px}.arrow{display:none} }
+    @media(prefers-reduced-motion:reduce){ *,*::before,*::after{transition:none!important;scroll-behavior:auto!important} }
+  </style>
+</head>
+<body>
+  <main class="shell"><nav class="navigator" id="navigator" aria-label="ניווט בין חדרי TheZone"></nav></main>
+  <script>
+    const THEZONE_ROOMS=[
+      {name:"שער הכניסה",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=EGIHYGBmIcH14o5q0djV"},
+      {name:"מוזיקה וסאונד",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=twroJJybec65EcOfNalj"},
+      {name:"Stage",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=9rA78JkKi021aD1ym5jK"},
+      {name:"אנשים וחברה",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=f27J8wTgALi4wsQUYgpT"},
+      {name:"מסעות ומקומות",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=oeSbeQbg1TxBJ244eyIN"},
+      {name:"יצירה ועיצוב",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=QsT90mBq4TsjO8mSFiY3"},
+      {name:"טבע וכדור הארץ",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=JjdNLb8omo14GakqfsUf"},
+      {name:"גילוי ופליאה",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=4TyerVGt2zF9HxbbIJnX"},
+      {name:"סיפורים ומסך",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=yiAE4H6nplhaEpffp1p5"},
+      {name:"תנועה וספורט",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=hTD0SrwKR9WEnUCuMtIN"},
+      {name:"טכנולוגיה והעתיד",url:"https://app.sparkco.space/s/S65tnTPkvTo8enlXWTEU?room=Ufz19MjwTUYxr6uHpFyz"}
+    ];
+    const ACCENTS=[[98,232,255,128,125,255],[255,98,208,137,103,255],[177,121,255,92,220,255],[255,124,147,255,182,105],[83,231,203,91,177,255],[255,154,99,255,94,183],[149,244,114,75,229,181],[255,221,91,255,146,91],[102,167,255,132,116,255],[255,118,87,255,205,92],[82,195,255,87,109,255]];
+    const qs=new URLSearchParams(location.search);
+    const bool=(value,fallback=false)=>{if(value==null||value===""||value.includes("@@"))return fallback;return["1","true","yes","on"].includes(String(value).toLowerCase())};
+    function decodeBase64Unicode(value){let raw=value.trim().replace(/-/g,"+").replace(/_/g,"/");while(raw.length%4)raw+="=";const binary=atob(raw);const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes)}
+    function normalizeRooms(input){if(!Array.isArray(input))return[];return input.map((item,index)=>{if(Array.isArray(item))return{name:String(item[0]??""),url:String(item[1]??""),index};if(item&&typeof item==="object")return{name:String(item.name??item.label??""),url:String(item.url??item.href??""),index,accent:item.accent};return null}).filter(r=>r&&r.name&&r.url)}
+    function loadRooms(){const roomParam=qs.get("rooms");if(!roomParam||roomParam.includes("@@"))return THEZONE_ROOMS;try{const decoded=roomParam.trim().startsWith("[")?roomParam:decodeBase64Unicode(roomParam);const parsed=typeof decoded==="string"?JSON.parse(decoded):decoded;const rooms=normalizeRooms(parsed);return rooms.length?rooms:THEZONE_ROOMS}catch(error){console.warn("Room Navigator: failed to parse rooms parameter",error);return THEZONE_ROOMS}}
+    const dedupe=rooms=>{const map=new Map();for(const room of rooms)map.set(room.name.trim(),room);return[...map.values()]};
+    function applyConfig(){const root=document.documentElement;const nav=document.getElementById("navigator");const transparent=bool(qs.get("transparent"),bool(qs.get("spk_transparent"),true));const layout=["flow","stack","grid"].includes(qs.get("layout"))?qs.get("layout"):"flow";const theme=["zone","minimal","neon"].includes(qs.get("theme"))?qs.get("theme"):"zone";const maxSign=Number(qs.get("max_width"));const fontSize=Number(qs.get("font_size"));const radius=Number(qs.get("radius"));const gap=Number(qs.get("gap"));document.body.classList.toggle("has-backdrop",!transparent);nav.dataset.layout=layout;nav.dataset.theme=theme;if(Number.isFinite(maxSign)&&maxSign>=150&&maxSign<=360)root.style.setProperty("--max-sign",`${maxSign}px`);if(Number.isFinite(fontSize)&&fontSize>=13&&fontSize<=28)root.style.setProperty("--font-size",`${fontSize}px`);if(Number.isFinite(radius)&&radius>=8&&radius<=40)root.style.setProperty("--radius",`${radius}px`);if(Number.isFinite(gap)&&gap>=4&&gap<=30)root.style.setProperty("--gap",`${gap}px`);return{theme,layout}}
+    function render(){const nav=document.getElementById("navigator");const{theme}=applyConfig();const rooms=dedupe(loadRooms());if(!rooms.length){nav.innerHTML='<div class="empty">לא נמצאו חדרים להצגה.</div>';return}nav.innerHTML="";rooms.forEach((room,index)=>{const accent=ACCENTS[index%ACCENTS.length];const a=Array.isArray(room.accent)&&room.accent.length>=6?room.accent:accent;const link=document.createElement("a");link.className="room-sign";link.href=room.url;link.target=qs.get("target")||"_top";link.rel="noopener";link.dataset.theme=theme;link.style.setProperty("--accent",`${a[0]}, ${a[1]}, ${a[2]}`);link.style.setProperty("--accent2",`${a[3]}, ${a[4]}, ${a[5]}`);link.setAttribute("aria-label",`מעבר לחדר ${room.name}`);link.innerHTML='<span class="signal" aria-hidden="true"></span><span class="label"></span><svg class="arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M9 7h8v8"></path></svg>';link.querySelector(".label").textContent=room.name;nav.appendChild(link)})}
+    render();
+  </script>
+</body>
+</html>
